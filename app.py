@@ -1,15 +1,26 @@
 from flask import Flask, request, abort
-from linebot.v3 import WebhookHandler
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
+
+from linebot import (
+    LineBotApi, WebhookHandler
+)
+from linebot.exceptions import (
+    InvalidSignatureError
+)
+from linebot.models import (
+    MessageEvent, TextMessage, TextSendMessage,
+)
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token='PC47flcC4Jjiz0HGC+1Q0dkYFOPKn1x6DkAdgKPm1hb6vsqMaYp0XzPcvVXY8Um1wIwrX8qqqx8hmVSexi+w0hj4MgVviZz3q60k4E4FbqVn7p+0HsF5CdclY+V1J/HsvxGP9xal/Kwiak9pZnQh4QdB04t89/1O/w1cDnyilFU=')
+line_bot_api = LineBotApi('PC47flcC4Jjiz0HGC+1Q0dkYFOPKn1x6DkAdgKPm1hb6vsqMaYp0XzPcvVXY8Um1wIwrX8qqqx8hmVSexi+w0hj4MgVviZz3q60k4E4FbqVn7p+0HsF5CdclY+V1J/HsvxGP9xal/Kwiak9pZnQh4QdB04t89/1O/w1cDnyilFU=')
 handler = WebhookHandler('3af4e696d9b9d59643382aac43bcb5f0')
 
 
+@app.route("/")
+def home():
+    return 'home OK'
+
+# 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
@@ -23,17 +34,20 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        app.logger.info("Invalid signature. Please check your channel access token/channel secret.")
+        print("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
 
     return 'OK'
 
 
-@handler.add(MessageEvent, message=TextMessageContent)
+# 處理訊息
+@handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        line_bot_api.reply_message_with_http_info( ReplyMessageRequest( reply_token=event.reply_token, messages=[TextMessage(text=event.message.text)]))
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=event.message.text))
+
 
 if __name__ == "__main__":
     app.run()
+    
